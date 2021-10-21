@@ -1,5 +1,58 @@
 <!DOCTYPE html>
 <html lang="en">
+  <h2 style="text-align: center;">
+    <a href="index.html">&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;Base&nbsp; &nbsp;
+      <span style="font-size: 2rem; color: #212529;">&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; </span>
+    </a>
+    <a href="contract.html" style="font-size: 2rem; background-color: #ffffff;">Contract</a>
+    <a href="index.html">&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;</a>
+    <a href="index.html">&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;</a>
+    <a href="login.html">Login with NEAR</a>
+  </h2>
+  
+  <div>
+    <hr>
+    <span style="font-size: 36pt;"></span>
+  </div>
+  
+  <div>
+    <img src="https://drive.google.com/file/d/1WEqq0xXNI4HAMQHuetTXUX-VhxOZ7AKe/view?usp=sharing" alt="">
+  </div>
+  
+  <div style="text-align: center;">
+    <span style="font-size: 36pt;">
+      <img src="https://drive.google.com/file/d/1WEqq0xXNI4HAMQHuetTXUX-VhxOZ7AKe/view?usp=sharing" alt="">
+    </span>
+    <span style="font-size: 36pt;">H.A.L.O.</span>
+  </div>
+  
+  <div style="text-align: center;">
+    <span style="font-size: 36pt;">
+      <img src="https://drive.google.com/drive/search?q=logo%20peace" alt="">
+    </span>
+  </div>
+  
+  <div></div>
+  
+  <h2 style="text-align: center;">
+    <span style="font-size: 24pt; color: #e03e2d;">H</span>ypercube 
+    <span style="color: #2dc26b;">A</span>lgorithmic 
+    <span style="color: #3598db;">L</span>anguage 
+    <span style="color: #f1c40f;">O</span>racle
+  </h2>
+  
+  <div style="text-align: center;"></div>
+  
+  <div style="text-align: center;">
+    <img src="https://drive.google.com/file/d/1kl0NY0qXyXnVzW3e5v2Cufbn2W0sQDcX/view?usp=sharing" alt="">
+    <img src="https://drive.google.com/file/d/1kl0NY0qXyXnVzW3e5v2Cufbn2W0sQDcX/view?usp=sharing" alt="">
+  </div>
+  
+  <div></div>
+  
+  <hr>
+
+
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
@@ -14,33 +67,70 @@
       <div><a href="contract.html">contract</a></div>
     </nav>
     <hr />
-    <button id="hello">helloWorld</button>
+
     <br />
-    <button id="read">read</button> <input type="text" id="read-key" placeholder="key" />
-    <br />
-    <button id="write">write</button> <input type="text" id="write-key" placeholder="key" /> <input type="text" id="write-value" placeholder="value" />
+    <button id="GetMagicWords">Get Magic Words</button> <input type="text" id="wordcount" placeholder="wordcount" /> <input type="text" id="extra" placeholder="extra" /> <input type="text" id="money" placeholder="money" />
+    
+
 
     <script>
       (async () => {
-        const { connect, keyStores, WalletConnection, Contract } = nearApi;
+        const { connect, keyStores, WalletConnection, Contract, providers } = nearApi;
+        //network config (replace testnet with mainnet or betanet)
+        const provider = new providers.JsonRpcProvider(
+          "https://archival-rpc.testnet.near.org"
+        );
 
-        const CONTRACT_ID = 'dev-1634098284641-40067785396400';
+        const TX_HASH = "9av2U6cova7LZPA9NPij6CTUrpBbgPG6LKVkyhcCqtk3";
+        // account ID associated with the transaction
+        const ACCOUNT_ID = "sender.testnet";
+
+        getState(TX_HASH, ACCOUNT_ID);
+
+        async function getState(txHash, accountId) {
+          const result = await provider.txStatus(txHash, accountId);
+          console.log("Result: ", result);
+        }
+
+        const CONTRACT_ID = 'dev-1634748555299-43411051036923';
 
         const near = await connect(config());
         const wallet = new WalletConnection(near, 'ncd-ii');
 
         const dom = setupDOMBindings();
 
-        const contract = new Contract(wallet.account(), CONTRACT_ID, {
-          viewMethods: ['helloWorld', 'read'],
-          changeMethods: ['write'],
-          sender: wallet.account()
-        });
+        //const contract = new Contract(wallet.account(), CONTRACT_ID, {
+        //  viewMethods: ['helloWorld', 'read'],
+        //  changeMethods: ['GetMagicWords'],
+        //  sender: wallet.account()
+        //});
+
+        const contract = {
+          helloWorld: async () => await view(CONTRACT_ID, 'helloWorld'),
+          readKey: async () => await view(CONTRACT_ID, 'read', { key: dom.txtReadKey.value }),
+          writeKey: async () => await change(CONTRACT_ID, 'GetMagicWords', { wordcount:parseInt(dom.txtWordCount.value), extra:dom.txtExtra.value}, typeof gas !== 'undefined' ? gas : null, dom.txtMoney.value)
+        };
+
+        async function change(contract, method, args, gas, amount) {
+          console.log('attempting to send signed transaction ...');
+          const response = await wallet.account().functionCall(contract, method, args, gas, amount);
+          const { transaction_outcome: txo } = response;
+          console.log(`gas burned: ${txo.outcome.gas_burnt}`);
+          console.log(`tokens burned: ${txo.outcome.tokens_burnt}`);
+          console.log(`logs: \n${txo.outcome.logs}`);
+        }
+
+        async function view(contract, method, args) {
+          const response = await wallet.account().viewFunction(contract, method, args);
+          console.log(response);
+        }
+
+
 
         if (wallet.isSignedIn()) {
-          dom.btnHello.addEventListener('click', async () => console.log(await contract.helloWorld()));
-          dom.btnRead.addEventListener('click', async () => console.log(await contract.read({ key: dom.txtReadKey.value })));
-          dom.btnWrite.addEventListener('click', async () => console.log(await contract.write({ key: dom.txtWriteKey.value, value: dom.txtWriteValue.value })));
+
+          //dom.btnGetMagicWords.addEventListener('click', async () => console.log(await contract.GetMagicWords({ wordcount:parseInt(dom.txtWordCount.value), extra:dom.txtExtra.value})));
+          dom.btnGetMagicWords.addEventListener('click', async () => console.log(await contract.writeKey()));
         }
 
         function config() {
@@ -56,12 +146,10 @@
 
         function setupDOMBindings() {
           return {
-            btnHello: document.querySelector('#hello'),
-            btnRead: document.querySelector('#read'),
-            txtReadKey: document.querySelector('#read-key'),
-            btnWrite: document.querySelector('#write'),
-            txtWriteKey: document.querySelector('#write-key'),
-            txtWriteValue: document.querySelector('#write-value')
+            btnGetMagicWords: document.querySelector('#GetMagicWords'),
+            txtWordCount: document.querySelector('#wordcount'),
+            txtExtra: document.querySelector('#extra'),
+            txtMoney: document.querySelector('#money'),
           };
         }
       })();
